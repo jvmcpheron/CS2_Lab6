@@ -1,9 +1,32 @@
-# CS2_Lab6
 
-## Introduction
-In class, we used a stack to convert an infix expression to a post-fix expression.  The code below converts infix to post-fix.  Please revise the code to convert infix to prefix expressions.  
 
-## The Code
+//Jane McPheron
+
+
+/*
+./main
+Expression: 1
++
+1
+;
+1 + 1 ; 
+Postfix version of expression: + 1 1 ; 
+Result is 2
+
+./main
+Expression: 2
++
+3
+*
+5
+;
+2 + 3 * 5 ; 
+Postfix version of expression: + 2 * 3 5 ; 
+Result is 17
+
+*/
+
+
 #include <iostream>
 #include <string>
 #include <list>
@@ -185,6 +208,90 @@ void evalPostfixExpr(list<ExpressionPart*> expressions) {
     }
 }
 
+
+
+void evalPrefixExpr(list<ExpressionPart*> expressions) {
+    list<ExpressionPart*> exprStack;
+    for (auto ep = expressions.rbegin(); ep != expressions.rend(); ++ep) {
+        switch ((*ep)->getEType()) {
+            case SEMI:
+                if (exprStack.size() == 1) {
+                    ExpressionPart* res = exprStack.front();
+                    if (res->getEType() == NUMBER) {
+                        cout << "Result is " << ((ExpressionNumber*) res)->getNumber() << endl;
+                    } else {
+                        cout << "1";
+                        throw INFIX_FORMAT_ERROR;
+                    }
+                } else {
+                    
+                }
+                break;
+            case NUMBER:
+                exprStack.push_front(*ep);
+                break;
+            case LPAREN:
+            case RPAREN:
+                cout<<"3";
+                throw INFIX_FORMAT_ERROR;
+                break;
+            case ADD:
+            case MINUS:
+            case TIMES:
+            case DIVIDE:
+            case POWER:
+                if (exprStack.size() < 2) {
+                    cout<<"4";
+                    throw INFIX_FORMAT_ERROR;
+                }
+                ExpressionPart *lft = exprStack.front();
+                exprStack.pop_front();
+                ExpressionPart *rgt = exprStack.front();
+                exprStack.pop_front();
+                if (lft->getEType() != NUMBER || rgt->getEType() != NUMBER) {
+                    cout<<"5";
+                    throw INFIX_FORMAT_ERROR;
+                }
+                double res = 0;
+                switch ((*ep)->getEType()) {
+                    case ADD:
+                        res = ((ExpressionNumber*)lft)->getNumber() + ((ExpressionNumber*)rgt)->getNumber();
+                        break;
+                    case MINUS:
+                        res = ((ExpressionNumber*)lft)->getNumber() - ((ExpressionNumber*)rgt)->getNumber();
+                        break;
+                    case TIMES:
+                        res = ((ExpressionNumber*)lft)->getNumber() * ((ExpressionNumber*)rgt)->getNumber();
+                        break;
+                    case DIVIDE:
+                        res = ((ExpressionNumber*)lft)->getNumber() / ((ExpressionNumber*)rgt)->getNumber();
+                        break;
+                    case POWER:
+                        res = pow(((ExpressionNumber*)lft)->getNumber(), ((ExpressionNumber*)rgt)->getNumber());
+                        break;
+                }
+                exprStack.push_front(new ExpressionNumber(res));
+                break;
+        }
+    }
+
+    if (exprStack.size() == 1) {
+        ExpressionPart* result = exprStack.front();
+        if (result->getEType() == NUMBER) {
+            cout << "Result is " << ((ExpressionNumber*)result)->getNumber() << endl;
+        } else {
+            cout<<"6";
+            throw INFIX_FORMAT_ERROR;
+        }
+    } else {
+        cout<<"7";
+        throw INFIX_FORMAT_ERROR;
+    }
+}
+
+
+
+
 list<ExpressionPart*> convertToPostfix(list<ExpressionPart*> ifExprs) {
     list<ExpressionPart*> pfExprs;
     list<ExpressionPart*> opStack;
@@ -243,20 +350,90 @@ list<ExpressionPart*> convertToPostfix(list<ExpressionPart*> ifExprs) {
     return pfExprs;
 }
 
+
+list<ExpressionPart*> convertToPrefix(list<ExpressionPart*> ifExprs) {
+    list<ExpressionPart*> pfExprs;
+    list<ExpressionPart*> opStack;
+
+    ifExprs.reverse();
+
+    for (auto ep : ifExprs) {
+        switch (ep->getEType()) {
+            case SEMI:
+                while (!opStack.empty()) {
+                    ExpressionPart* opp = opStack.front();
+                    if (opp->getEType() == RPAREN) {
+                        throw INFIX_FORMAT_ERROR;
+                    }
+                    else {
+                        pfExprs.push_back(opp);
+                    }
+                    opStack.pop_front();
+                }
+                pfExprs.push_back(ep);
+                break;
+            case LPAREN:
+                opStack.push_front(ep);
+                break;
+            case RPAREN:
+                while ((!opStack.empty()) && (opStack.front()->getEType() != RPAREN)) {
+                    pfExprs.push_back(opStack.front());
+                    opStack.pop_front();
+                }
+                if (opStack.empty() || opStack.front()->getEType() != LPAREN) {
+                    throw INFIX_FORMAT_ERROR;
+                }
+                else {
+                    opStack.pop_front();
+                }
+                break;
+            case NUMBER:
+                pfExprs.push_back(ep);
+                break;
+            case ADD:
+            case MINUS:
+            case TIMES:
+            case DIVIDE:
+            case POWER:
+                while ((!opStack.empty()) &&
+                        (opStack.front()->getEType() != LPAREN) &&
+                        ((OPERATOR_PRECEDENCE[opStack.front()->getEType()] > OPERATOR_PRECEDENCE[ep->getEType()]) ||
+                        ((OPERATOR_PRECEDENCE[opStack.front()->getEType()] == OPERATOR_PRECEDENCE[ep->getEType()]) && OPERATOR_LEFT_ASSOCIATIVE[ep->getEType()]))) {
+                    ExpressionPart *opp = opStack.front();
+                    pfExprs.push_back(opp);
+                    opStack.pop_front();
+                }
+                opStack.push_front(ep);
+                break;
+        }
+    }
+
+    while (!opStack.empty()) {
+        pfExprs.push_back(opStack.front());
+        opStack.pop_front();
+    }
+
+    // Reverse the output expression to get the prefix order
+    pfExprs.reverse();
+
+    return pfExprs;
+}
+
+
+
+
+
 int main() {
     try {
         list<ExpressionPart *> expressions = readExpr();
         showExpr(expressions);
-        list<ExpressionPart *> pfExprs = convertToPostfix(expressions);
+        list<ExpressionPart *> pfExprs = convertToPrefix(expressions);
         cout << "Postfix version of expression: ";
         showExpr(pfExprs);
-        evalPostfixExpr(expressions);
+        evalPrefixExpr(pfExprs);
     }
     catch (string s) {
         cerr << s << endl;
     }
     return 0;
 }
-## What to Submit
-Submit your solution as a CPP file with your first and last name included in the file as a comment.   Add a long comment in your code showing examples of your code correctly calculating the results. 
-
